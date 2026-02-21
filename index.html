@@ -18,6 +18,11 @@
             font-weight: bold; cursor: pointer; border-radius: 5px; font-family: 'Arial';
         }
         button.stop { background: #ff3333; color: white; }
+        button.action { background: #00d9ff; color: #000; }
+        select.action-select {
+            background: #00d9ff; border: none; padding: 10px;
+            font-weight: bold; cursor: pointer; border-radius: 5px; font-family: 'Arial';
+        }
         .slider-label { color: white; font-weight: bold; min-width: 80px; }
         input[type=range] { cursor: pointer; width: 120px; }
         #labels-container { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 50; }
@@ -39,6 +44,20 @@
 <div id="ui">
     <div class="control-group">
         <button id="toggleBtn">بدء المحاكاة</button>
+    </div>
+    <div class="control-group">
+        <span class="slider-label" style="color: #00d9ff;">انتقال إلى:</span>
+        <select id="teleportSelect" class="action-select">
+            <option value="" disabled selected>اختر نقطة...</option>
+            <option value="M0">M0</option>
+            <option value="M1">M1</option>
+            <option value="M2">M2</option>
+            <option value="M3">M3</option>
+            <option value="M4">M4</option>
+            <option value="M5">M5</option>
+            <option value="M6">M6</option>
+            <option value="M7">M7</option>
+        </select>
     </div>
     <div class="control-group">
         <span class="slider-label">السرعة:</span>
@@ -209,7 +228,6 @@
         const direction = new THREE.Vector3();
         camera.getWorldDirection(direction);
         
-        // Horizontal movement only
         const horizontalDir = direction.clone();
         horizontalDir.y = 0;
         horizontalDir.normalize();
@@ -226,7 +244,7 @@
 
         if (moveDelta.lengthSq() > 0) {
             camera.position.add(moveDelta);
-            controls.target.add(moveDelta); // Sync the pivot with the camera position
+            controls.target.add(moveDelta);
         }
     }
 
@@ -258,12 +276,11 @@
                 earthPoints.forEach(m => {
                     updateLabel(m.el, m.pos);
                     let diff = Math.min(Math.abs(currentPosAngle - m.targetAngle), Math.PI*2 - Math.abs(currentPosAngle - m.targetAngle));
-                    m.el.style.color = diff < 0.1 ? "#00ff88" : "#888";
+                    m.el.style.color = diff < 0.05 ? "#00ff88" : "#888";
                 });
             }
         });
 
-        // Update Axis Labels
         axisLabels.forEach(axis => {
             updateLabel(axis.el, axis.pos);
         });
@@ -286,6 +303,24 @@
         isRotating = !isRotating;
         this.innerText = isRotating ? "إيقاف" : "بدء المحاكاة";
         this.className = isRotating ? "stop" : "";
+    };
+
+    // Updated: Selector to teleport Earth to chosen point
+    document.getElementById('teleportSelect').onchange = function() {
+        const selectedM = this.value;
+        const earth = planets.find(p => p.name === "الأرض");
+        const targetPoint = earthPoints.find(m => m.el.innerText === selectedM);
+        
+        if (earth && targetPoint) {
+            earth.angle = targetPoint.targetAngle;
+            // Stop rotation to show the result clearly
+            isRotating = false;
+            const toggleBtn = document.getElementById('toggleBtn');
+            toggleBtn.innerText = "بدء المحاكاة";
+            toggleBtn.className = "";
+        }
+        // Reset select so it can be triggered again if the same point is picked later
+        this.value = "";
     };
 
     document.getElementById('speedSlider').oninput = function() {
