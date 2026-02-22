@@ -31,6 +31,7 @@
         .label { position: absolute; transform: translate(-50%, -50%); text-shadow: 2px 2px 5px #000; font-weight: bold; color: white; white-space: nowrap; }
         .m-point-label { font-size: 12px; color: #888; }
         .planet-label { font-size: 14px; color: #fff; }
+        .sun-label { font-size: 18px; color: #ffffff; font-weight: 900; }
         .axis-label { font-size: 18px; font-weight: 900; }
         #instructions {
             position: absolute; bottom: 20px; right: 20px; color: #aaa;
@@ -94,7 +95,7 @@
     let globalSizeMultiplier = 1;
     let sunSizeMultiplier = 1;
     let axesHelper;
-    let sun;
+    let sun, sunLabel;
     const planets = [];
     const earthPoints = [];
     const axisLabels = [];
@@ -144,6 +145,12 @@
         const sunMat = new THREE.MeshBasicMaterial({ color: 0xFFCC00 });
         sun = new THREE.Mesh(sunGeo, sunMat);
         scene.add(sun);
+
+        // Sun Label
+        sunLabel = document.createElement('div');
+        sunLabel.className = 'label sun-label';
+        sunLabel.innerText = 'الشمس';
+        labelsContainer.appendChild(sunLabel);
 
         // Sun XYZ Axes
         const axisLength = 300;
@@ -257,9 +264,10 @@
         updateCameraMovement();
         controls.update();
 
-        // Update Sun Size
+        // Update Sun Size and Label
         if (sun) {
             sun.scale.set(sunSizeMultiplier, sunSizeMultiplier, sunSizeMultiplier);
+            updateLabel(sunLabel, sun.position);
         }
 
         planets.forEach(p => {
