@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المعلم السطحي الأرضي</title>
+    <script src="tailwind.js"></script>
+    <!-- Three.js Library -->
+    <script src="three.min.js"></script>
+    <script src="OrbitControls.js"></script>
+    <style>
+        body {
+            background-color: #1a1a1a; /* Dark gray background */
+            color: #ffffff;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #1a1a1a;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Container for 3D and Text */
+        .main-layout {
+            display: flex;
+            flex-direction: row; /* Text on Left, 3D on Right */
+            width: 100%;
+            height: 100vh;
+            align-items: center;
+        }
+
+        /* 3D Section (Right) */
+        .simulation-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            cursor: grab;
+        }
+
+        .simulation-container:active {
+            cursor: grabbing;
+        }
+
+        /* Content Section (Left) */
+        .content-section {
+            flex: 0 0 45%; 
+            padding: 60px;
+            text-align: right;
+            z-index: 10;
+        }
+
+        /* Dynamic 3D Labels */
+        .axis-label {
+            position: absolute;
+            font-weight: 800;
+            font-size: 1.2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .label-x { color: #ff4444; } 
+        .label-y { color: #44ff44; } 
+        .label-z { color: #4488ff; } 
+
+        p {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: #ffffff;
+            font-weight: 400;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            padding: 20px;
+        }
+
+        /* Navigation Buttons */
+        .nav-btn {
+            position: fixed;
+            bottom: 40px;
+            padding: 15px 40px;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            color: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            text-decoration: none;
+            z-index: 100;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .btn-next { right: 40px; border-right: 5px solid #4facfe; }
+        .btn-back { left: 40px; border-left: 5px solid #ff8c00; }
+
+        @media (max-width: 1024px) {
+            .main-layout { flex-direction: column; }
+            .content-section { flex: 1; padding: 20px; order: 2; }
+            .simulation-container { flex: 1; order: 1; min-height: 50vh; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-layout">
+        <!-- Content on the Left -->
+        <div class="content-section">
+            <p>
+                المعلم السطحي الأرضي هو إطار مرجعي يُتخذ سطح الأرض أو قريبًا منه كنقطة مركزية، بحيث تُدرس حركة الأجسام بالنسبة للأرض مباشرة. في هذا الإطار، تُلاحظ حركة الأجسام على الأرض أو بالقرب منها، مثل السيارات، القطارات، والطائرات، ويُستخدم لفهم الحركة اليومية والسرعات بالنسبة لسطح الأرض. على الرغم من أن الأرض تدور حول محورها وحول الشمس، يُعتبر المعلم السطحي الأرضي مناسبًا لتبسيط الحسابات العملية في الحياة اليومية والهندسة والملاحة.
+            </p>
+        </div>
+
+        <!-- Simulation on the Right -->
+        <div class="simulation-container" id="sim-container">
+            <!-- XYZ Labels in English -->
+            <div id="label-x" class="axis-label label-x">X</div>
+            <div id="label-y" class="axis-label label-y">Y</div>
+            <div id="label-z" class="axis-label label-z">Z</div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <a href="page4.html" class="nav-btn btn-back">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        السابق
+    </a>
+
+    <a href="page6.html" class="nav-btn btn-next">
+        التالي
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+    </a>
+
+    <script>
+        window.onload = function() {
+            const container = document.getElementById('sim-container');
+            
+            const scene = new THREE.Scene();
+            scene.fog = null;
+
+            const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 1, 2000);
+            // Camera moved even further back (unzoomed more) for a much wider view
+            camera.position.set(450, 280, 450);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.autoRotate = false;
+            controls.maxPolarAngle = Math.PI / 2.1;
+            // Allow user to zoom out further if they want
+            controls.maxDistance = 1000;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dirLight.position.set(100, 200, 100);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Room Components
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x4b3621, roughness: 0.9 });
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 1.0 });
+            const boardMat = new THREE.MeshStandardMaterial({ color: 0x064e3b });
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.6 });
+
+            // Floor
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Back Wall
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(300, 120, 4), wallMat);
+            backWall.position.set(0, 60, -150);
+            scene.add(backWall);
+
+            // Left Wall
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(4, 120, 300), wallMat);
+            leftWall.position.set(-150, 60, 0);
+            scene.add(leftWall);
+
+            // Blackboard
+            const board = new THREE.Mesh(new THREE.BoxGeometry(160, 60, 1), boardMat);
+            board.position.set(0, 65, -147.5);
+            scene.add(board);
+
+            // Tables
+            function createTable(w, h, d, x, z) {
+                const group = new THREE.Group();
+                const top = new THREE.Mesh(new THREE.BoxGeometry(w, 2, d), woodMat);
+                top.position.y = h;
+                top.castShadow = true;
+                group.add(top);
+
+                const legGeo = new THREE.BoxGeometry(1.5, h, 1.5);
+                const legs = [[-w/2+1, h/2, -d/2+1], [w/2-1, h/2, -d/2+1], [-w/2+1, h/2, d/2-1], [w/2-1, h/2, d/2-1]];
+                legs.forEach(p => {
+                    const leg = new THREE.Mesh(legGeo, metalMat);
+                    leg.position.set(p[0], p[1], p[2]);
+                    group.add(leg);
+                });
+                group.position.set(x, 0, z);
+                return group;
+            }
+
+            scene.add(createTable(70, 26, 35, 0, -100)); // Teacher
+            for(let i=0; i<3; i++) {
+                for(let j=0; j<4; j++) {
+                    scene.add(createTable(45, 22, 28, -90 + (j*60), -20 + (i*50)));
+                }
+            }
+
+            // XYZ Axes in the corner
+            const axesGroup = new THREE.Group();
+            const axisLength = 80;
+            const xLine = new THREE.Mesh(new THREE.BoxGeometry(axisLength, 2, 2), new THREE.MeshBasicMaterial({color: 0xff4444}));
+            xLine.position.set(axisLength/2, 1, 0);
+            axesGroup.add(xLine);
+            const yLine = new THREE.Mesh(new THREE.BoxGeometry(2, axisLength, 2), new THREE.MeshBasicMaterial({color: 0x44ff44}));
+            yLine.position.set(0, axisLength/2, 0);
+            axesGroup.add(yLine);
+            const zLine = new THREE.Mesh(new THREE.BoxGeometry(2, 2, axisLength), new THREE.MeshBasicMaterial({color: 0x4488ff}));
+            zLine.position.set(0, 1, axisLength/2);
+            axesGroup.add(zLine);
+            axesGroup.position.set(-145, 0, -145);
+            scene.add(axesGroup);
+
+            // Floating Labels Logic
+            const labels = {
+                x: { el: document.getElementById('label-x'), pos: new THREE.Vector3(-145 + axisLength + 10, 5, -145) },
+                y: { el: document.getElementById('label-y'), pos: new THREE.Vector3(-145, axisLength + 10, -145) },
+                z: { el: document.getElementById('label-z'), pos: new THREE.Vector3(-145, 5, -145 + axisLength + 10) }
+            };
+
+            const tempV = new THREE.Vector3();
+            function updateLabels() {
+                Object.values(labels).forEach(l => {
+                    tempV.copy(l.pos).project(camera);
+                    const x = (tempV.x * 0.5 + 0.5) * container.clientWidth;
+                    const y = (tempV.y * -0.5 + 0.5) * container.clientHeight;
+                    l.el.style.left = `${x}px`;
+                    l.el.style.top = `${y}px`;
+                    l.el.style.opacity = tempV.z > 1 ? '0' : '1';
+                });
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                updateLabels();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        };
+    </script>
+</body>
+</html>
