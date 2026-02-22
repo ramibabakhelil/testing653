@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكاة الأرض والنظام الشمسي - متجهات الفيزياء</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; }
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: auto;
+            background: rgba(10, 10, 10, 0.92); display: flex; align-items: center;
+            padding: 15px 20px; z-index: 100; border-bottom: 1px solid #333; direction: rtl;
+            flex-wrap: wrap; gap: 20px;
+        }
+        .control-group { display: flex; align-items: center; gap: 10px; }
+        button {
+            background: #00ff88; border: none; padding: 10px 20px;
+            font-weight: bold; cursor: pointer; border-radius: 5px; font-family: 'Arial';
+        }
+        button.stop { background: #ff3333; color: white; }
+        button.action { background: #00d9ff; color: #000; }
+        button.toggle-off { background: #555; color: white; }
+        button.earth-only { background: #ffffff; color: #000; border: 1px solid #ccc; }
+        select.action-select {
+            background: #00d9ff; border: none; padding: 10px;
+            font-weight: bold; cursor: pointer; border-radius: 5px; font-family: 'Arial';
+        }
+        .slider-label { color: white; font-weight: bold; min-width: 80px; }
+        input[type=range] { cursor: pointer; width: 120px; }
+        #labels-container { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 50; }
+        .label { position: absolute; transform: translate(-50%, -50%); text-shadow: 2px 2px 5px #000; font-weight: bold; color: white; white-space: nowrap; }
+        .m-point-label { font-size: 12px; color: #888; }
+        .planet-label { font-size: 14px; color: #fff; }
+        .axis-label { font-size: 18px; font-weight: 900; }
+        #instructions {
+            position: absolute; bottom: 20px; right: 20px; color: #aaa;
+            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px;
+            font-size: 12px; pointer-events: none; direction: rtl;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+<div id="ui">
+    <div class="control-group">
+        <button id="toggleBtn">بدء المحاكاة</button>
+    </div>
+    <div class="control-group">
+        <button id="toggleVectorsBtn" class="action">إخفاء المتجهات والمحاور</button>
+    </div>
+    <div class="control-group">
+        <button id="earthOnlyBtn" class="earth-only" onclick="window.location.href='earthonly.html'">عرض الأرض فقط</button>
+    </div>
+    <div class="control-group">
+        <span class="slider-label" style="color: #00d9ff;">انتقال إلى:</span>
+        <select id="teleportSelect" class="action-select">
+            <option value="" disabled selected>اختر نقطة...</option>
+            <option value="M0">M0</option>
+            <option value="M1">M1</option>
+            <option value="M2">M2</option>
+            <option value="M3">M3</option>
+            <option value="M4">M4</option>
+            <option value="M5">M5</option>
+            <option value="M6">M6</option>
+            <option value="M7">M7</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <span class="slider-label">السرعة:</span>
+        <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1">
+        <span id="speedVal" style="color: #00ff88;">1x</span>
+    </div>
+    <div class="control-group">
+        <span class="slider-label">حجم الكواكب:</span>
+        <input type="range" id="sizeSlider" min="0.5" max="10" step="0.1" value="1">
+        <span id="sizeVal" style="color: #00ff88;">1x</span>
+    </div>
+    <div class="control-group">
+        <span class="slider-label">حجم الشمس:</span>
+        <input type="range" id="sunSizeSlider" min="0.5" max="5" step="0.1" value="1">
+        <span id="sunSizeVal" style="color: #ffcc00;">1x</span>
+    </div>
+</div>
+
+<div id="labels-container"></div>
+
+<script>
+    let scene, camera, renderer, controls;
+    let isRotating = false;
+    let showVectors = true;
+    let globalSpeedMultiplier = 1;
+    let globalSizeMultiplier = 1;
+    let sunSizeMultiplier = 1;
+    let axesHelper;
+    let sun;
+    const planets = [];
+    const earthPoints = [];
+    const axisLabels = [];
+    const labelsContainer = document.getElementById('labels-container');
+
+    // Movement state
+    const moveState = { forward: false, backward: false, left: false, right: false };
+    const moveSpeed = 15;
+
+    const planetData = [
+        { name: "عطارد", dist: 120, size: 4, speed: 0.040, color: 0xAAAAAA },
+        { name: "الزهرة", dist: 180, size: 9, speed: 0.030, color: 0xE3BB76 },
+        { name: "الأرض", dist: 260, size: 10, speed: 0.025, color: 0x2271B3, isFocus: true },
+        { name: "المريخ", dist: 340, size: 7, speed: 0.020, color: 0xE27B58 },
+        { name: "المشتري", dist: 500, size: 24, speed: 0.012, color: 0xD39C7E },
+        { name: "زحل", dist: 680, size: 20, speed: 0.009, color: 0xC5AB6E, hasRings: true },
+        { name: "أورانوس", dist: 850, size: 14, speed: 0.006, color: 0xB5E1E6 },
+        { name: "نبتون", dist: 1000, size: 14, speed: 0.005, color: 0x3E54E8 }
+    ];
+
+    init();
+    animate();
+
+    function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 30000);
+        camera.position.set(0, 1000, 2000);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Stars
+        const starsGeo = new THREE.BufferGeometry();
+        const starsPos = [];
+        for(let i=0; i<8000; i++) {
+            starsPos.push((Math.random()-0.5)*20000, (Math.random()-0.5)*20000, (Math.random()-0.5)*20000);
+        }
+        starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
+        scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xFFFFFF, size: 1.5 })));
+
+        // Basic Sun
+        const sunGeo = new THREE.SphereGeometry(60, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xFFCC00 });
+        sun = new THREE.Mesh(sunGeo, sunMat);
+        scene.add(sun);
+
+        // Sun XYZ Axes
+        const axisLength = 300;
+        axesHelper = new THREE.AxesHelper(axisLength);
+        scene.add(axesHelper);
+
+        // Axis Labels
+        const axes = [
+            { label: 'X', pos: new THREE.Vector3(axisLength + 20, 0, 0), color: '#ff3333' },
+            { label: 'Y', pos: new THREE.Vector3(0, axisLength + 20, 0), color: '#33ff33' },
+            { label: 'Z', pos: new THREE.Vector3(0, 0, axisLength + 20), color: '#3333ff' }
+        ];
+
+        axes.forEach(axis => {
+            const el = document.createElement('div');
+            el.className = 'label axis-label';
+            el.innerText = axis.label;
+            el.style.color = axis.color;
+            labelsContainer.appendChild(el);
+            axisLabels.push({ el, pos: axis.pos });
+        });
+
+        const sunLight = new THREE.PointLight(0xffffff, 2, 5000);
+        scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0x333333));
+
+        planetData.forEach(data => {
+            const orbitCurve = new THREE.EllipseCurve(0, 0, data.dist, data.dist);
+            const orbitGeo = new THREE.BufferGeometry().setFromPoints(orbitCurve.getPoints(200));
+            const orbit = new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({color: 0x444444}));
+            orbit.rotation.x = Math.PI/2;
+            scene.add(orbit);
+
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(data.size, 32, 32), new THREE.MeshPhongMaterial({color: data.color}));
+            scene.add(mesh);
+
+            if (data.hasRings) {
+                const ring = new THREE.Mesh(
+                    new THREE.RingGeometry(data.size + 5, data.size + 15, 64), 
+                    new THREE.MeshBasicMaterial({ color: 0x777777, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })
+                );
+                ring.rotation.x = Math.PI/2;
+                mesh.add(ring);
+            }
+
+            const vArrow = new THREE.ArrowHelper(new THREE.Vector3(), new THREE.Vector3(), 50, 0x00ff88, 12, 6);
+            const dvArrow = new THREE.ArrowHelper(new THREE.Vector3(), new THREE.Vector3(), 50, 0xff3333, 12, 6);
+            scene.add(vArrow, dvArrow);
+
+            const el = document.createElement('div');
+            el.className = 'label planet-label';
+            el.innerText = data.name;
+            labelsContainer.appendChild(el);
+
+            const planetObj = { ...data, mesh, vArrow, dvArrow, label: el, angle: Math.random() * Math.PI * 2 };
+            planets.push(planetObj);
+
+            if (data.isFocus) {
+                for (let i = 0; i < 8; i++) {
+                    const angleM = i * (Math.PI / 4);
+                    const xM = data.dist * Math.cos(angleM);
+                    const zM = data.dist * Math.sin(angleM);
+                    const dot = new THREE.Mesh(new THREE.SphereGeometry(2, 8, 8), new THREE.MeshBasicMaterial({color: 0x666666}));
+                    dot.position.set(xM, 0, zM);
+                    scene.add(dot);
+                    const mEl = document.createElement('div');
+                    mEl.className = 'label m-point-label';
+                    mEl.innerText = `M${i}`;
+                    labelsContainer.appendChild(mEl);
+                    earthPoints.push({ el: mEl, pos: new THREE.Vector3(xM, 10, zM), targetAngle: angleM });
+                }
+            }
+        });
+
+        window.addEventListener('keydown', (e) => handleKey(e.code, true));
+        window.addEventListener('keyup', (e) => handleKey(e.code, false));
+    }
+
+    function handleKey(code, isPressed) {
+        switch(code) {
+            case 'KeyW': moveState.forward = isPressed; break;
+            case 'KeyS': moveState.backward = isPressed; break;
+            case 'KeyA': moveState.left = isPressed; break;
+            case 'KeyD': moveState.right = isPressed; break;
+        }
+    }
+
+    function updateCameraMovement() {
+        const direction = new THREE.Vector3();
+        camera.getWorldDirection(direction);
+        const horizontalDir = direction.clone();
+        horizontalDir.y = 0;
+        horizontalDir.normalize();
+        const sideVector = new THREE.Vector3();
+        sideVector.crossVectors(camera.up, horizontalDir).normalize();
+        const moveDelta = new THREE.Vector3(0, 0, 0);
+
+        if (moveState.forward) moveDelta.addScaledVector(horizontalDir, moveSpeed);
+        if (moveState.backward) moveDelta.addScaledVector(horizontalDir, -moveSpeed);
+        if (moveState.left) moveDelta.addScaledVector(sideVector, moveSpeed);
+        if (moveState.right) moveDelta.addScaledVector(sideVector, -moveSpeed);
+
+        if (moveDelta.lengthSq() > 0) {
+            camera.position.add(moveDelta);
+            controls.target.add(moveDelta);
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        updateCameraMovement();
+        controls.update();
+
+        // Update Sun Size
+        if (sun) {
+            sun.scale.set(sunSizeMultiplier, sunSizeMultiplier, sunSizeMultiplier);
+        }
+
+        planets.forEach(p => {
+            if(isRotating) p.angle += p.speed * 0.4 * globalSpeedMultiplier;
+            let x = p.dist * Math.cos(p.angle);
+            let z = p.dist * Math.sin(p.angle);
+            p.mesh.position.set(x, 0, z);
+            p.mesh.scale.set(globalSizeMultiplier, globalSizeMultiplier, globalSizeMultiplier);
+            p.vArrow.visible = showVectors;
+            p.dvArrow.visible = showVectors;
+
+            if (showVectors) {
+                p.vArrow.position.set(x, 0, z);
+                p.vArrow.setDirection(new THREE.Vector3(-Math.sin(p.angle), 0, Math.cos(p.angle)));
+                p.dvArrow.position.set(x, 0, z);
+                p.dvArrow.setDirection(new THREE.Vector3(-Math.cos(p.angle), 0, -Math.sin(p.angle)));
+            }
+
+            updateLabel(p.label, p.mesh.position);
+            
+            if (p.isFocus) {
+                let currentPosAngle = p.angle % (Math.PI * 2);
+                if (currentPosAngle < 0) currentPosAngle += Math.PI * 2;
+                earthPoints.forEach(m => {
+                    updateLabel(m.el, m.pos);
+                    let diff = Math.min(Math.abs(currentPosAngle - m.targetAngle), Math.PI*2 - Math.abs(currentPosAngle - m.targetAngle));
+                    m.el.style.color = diff < 0.05 ? "#00ff88" : "#888";
+                });
+            }
+        });
+
+        axesHelper.visible = showVectors;
+        axisLabels.forEach(axis => {
+            if (!showVectors) {
+                axis.el.style.display = 'none';
+            } else {
+                updateLabel(axis.el, axis.pos);
+            }
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    function updateLabel(el, pos3d) {
+        let proj = pos3d.clone().project(camera);
+        if (proj.z > 1 || Math.abs(proj.x) > 1 || Math.abs(proj.y) > 1) {
+            el.style.display = 'none';
+        } else {
+            el.style.display = 'block';
+            el.style.left = (proj.x * 0.5 + 0.5) * window.innerWidth + 'px';
+            el.style.top = (-proj.y * 0.5 + 0.5) * window.innerHeight + 'px';
+        }
+    }
+
+    document.getElementById('toggleBtn').onclick = function() {
+        isRotating = !isRotating;
+        this.innerText = isRotating ? "إيقاف" : "بدء المحاكاة";
+        this.className = isRotating ? "stop" : "";
+    };
+
+    document.getElementById('toggleVectorsBtn').onclick = function() {
+        showVectors = !showVectors;
+        this.innerText = showVectors ? "إخفاء المتجهات والمحاور" : "إظهار المتجهات والمحاور";
+        this.className = showVectors ? "action" : "toggle-off";
+    };
+
+    document.getElementById('teleportSelect').onchange = function() {
+        const selectedM = this.value;
+        const earth = planets.find(p => p.name === "الأرض");
+        const targetPoint = earthPoints.find(m => m.el.innerText === selectedM);
+        if (earth && targetPoint) {
+            earth.angle = targetPoint.targetAngle;
+            isRotating = false;
+            const toggleBtn = document.getElementById('toggleBtn');
+            toggleBtn.innerText = "بدء المحاكاة";
+            toggleBtn.className = "";
+        }
+        this.value = "";
+    };
+
+    document.getElementById('speedSlider').oninput = function() {
+        globalSpeedMultiplier = parseFloat(this.value);
+        document.getElementById('speedVal').innerText = globalSpeedMultiplier + "x";
+    };
+
+    document.getElementById('sizeSlider').oninput = function() {
+        globalSizeMultiplier = parseFloat(this.value);
+        document.getElementById('sizeVal').innerText = globalSizeMultiplier + "x";
+    };
+
+    document.getElementById('sunSizeSlider').oninput = function() {
+        sunSizeMultiplier = parseFloat(this.value);
+        document.getElementById('sunSizeVal').innerText = sunSizeMultiplier + "x";
+    };
+
+    window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+</script>
+</body>
+</html>
