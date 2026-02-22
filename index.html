@@ -121,6 +121,32 @@
             pointer-events: none;
             z-index: 0;
         }
+
+        /* Name labels styling */
+        .name-label {
+            position: absolute;
+            color: #d1d5db; /* Light gray */
+            font-size: 1.3rem;
+            font-weight: 400;
+            pointer-events: none;
+            z-index: 3;
+            text-align: center;
+            white-space: nowrap; /* Keeps text in one line */
+        }
+
+        .name-header {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-size: 1.5rem; /* Slightly bigger */
+            font-weight: 500;
+            opacity: 1;
+            pointer-events: none;
+            z-index: 3;
+            text-align: center;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -131,6 +157,17 @@
     <div class="container">
         <a href="page1.html" class="start-btn" id="mainLink">إبدأ</a>
     </div>
+
+    <!-- Main Header - Centered and higher -->
+    <div class="name-header" style="bottom: 200px;">من طرف التلاميذ:</div>
+
+    <!-- Bottom Left Section (سعدي محمد يونس and عينة أسامة) -->
+    <div class="name-label" style="bottom: 130px; left: 42%; transform: translateX(-50%);">سعدي محمد يونس</div>
+    <div class="name-label" style="bottom: 90px; left: 42%; transform: translateX(-50%);">عينة أسامة</div>
+
+    <!-- Bottom Right Section (باباخليل رامي and بورقبة عبد الباسط) -->
+    <div class="name-label" style="bottom: 130px; right: 42%; transform: translateX(50%);">باباخليل رامي</div>
+    <div class="name-label" style="bottom: 90px; right: 42%; transform: translateX(50%);">بورقبة عبد الباسط</div>
 
     <script>
         // Track mouse for subtle glow effect
@@ -162,4 +199,3 @@
     </script>
 </body>
 </html>
-
