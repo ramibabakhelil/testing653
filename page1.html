@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الحركة المركزية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1a1a1a; /* Dark gray background */
+            color: #ffffff; /* Pure white text */
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at center, #252525 0%, #121212 100%);
+        }
+
+        /* Simulation Container */
+        .simulation-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+        }
+
+        /* The Center Point with Glow */
+        .center-ball {
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #ffd700, #ff8c00);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.6), 0 0 100px rgba(255, 140, 0, 0.3);
+            z-index: 10;
+            position: relative;
+        }
+
+        /* The Orbit Path with Neon effect */
+        .orbit-path {
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 20px rgba(255, 255, 255, 0.02);
+            border-radius: 50%;
+        }
+
+        /* The Orbiting Ball with Trail Effect */
+        .orbiting-ball {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: radial-gradient(circle, #00f2fe, #4facfe);
+            border-radius: 50%;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 25px #4facfe;
+        }
+
+        /* Animation */
+        .orbit-animation {
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            animation: rotate 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Premium Navigation Buttons */
+        .nav-btn {
+            position: fixed;
+            bottom: 30px;
+            padding: 14px 32px;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            color: white;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-decoration: none; /* Ensure link looks like button */
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-next { right: 40px; border-right: 4px solid #4facfe; }
+        .btn-back { left: 40px; border-left: 4px solid #ff8c00; }
+
+        .content-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: right;
+        }
+
+        h1 {
+            font-size: 7rem; /* Even BIGGER Title */
+            font-weight: 900;
+            margin-bottom: 30px;
+            line-height: 1;
+            background: linear-gradient(135deg, #ffffff 30%, #cccccc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+
+        p {
+            font-size: 1.6rem;
+            line-height: 1.7;
+            color: #ffffff; /* Pure white paragraph */
+            max-width: 650px;
+            font-weight: 400;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            align-items: center;
+            min-height: 100vh;
+            gap: 40px;
+        }
+
+        @media (max-width: 1024px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+                padding-top: 50px;
+                height: auto;
+                text-align: center;
+            }
+            .content-section { text-align: center; }
+            p { margin: 0 auto; }
+            h1 { font-size: 4rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto px-10">
+        <div class="layout-grid">
+            <!-- Text Content -->
+            <div class="content-section">
+                <h1 class="font-bold">الحركة<br>المركزية</h1>
+                <p>
+                    الحركة المركزية هي حركة جسم على مسار دائري حول نقطة ثابتة تُسمّى المركز، وذلك تحت تأثير قوة تكون موجهة دائمًا نحو هذه النقطة. هذه القوة تُسمّى القوة المركزية، وهي المسؤولة عن إبقاء الجسم في مساره الدائري ومنعه من الانطلاق في خط مستقيم.
+                </p>
+            </div>
+
+            <!-- Visualization Area -->
+            <div class="simulation-container">
+                <div class="orbit-path"></div>
+                <div class="center-ball"></div>
+                <div class="orbit-animation">
+                    <div class="orbiting-ball"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <a href="index.html" class="nav-btn btn-back">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        السابق
+    </a>
+
+    <a href="page2.html" class="nav-btn btn-next">
+        التالي
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+    </a>
+
+</body>
+</html>
